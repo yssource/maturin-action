@@ -8189,7 +8189,7 @@ async function dockerBuild(tag, args) {
     const scriptPath = path.join(workspace, 'run-maturin-action.sh');
     (0, fs_1.writeFileSync)(scriptPath, commands.join('\n'));
     await fs_1.promises.chmod(scriptPath, 0o755);
-    return await exec.exec('docker', [
+    const exitCode = await exec.exec('docker', [
         'run',
         '--rm',
         '--workdir',
@@ -8220,6 +8220,12 @@ async function dockerBuild(tag, args) {
         image,
         scriptPath
     ]);
+    if (IS_LINUX || IS_MACOS) {
+        const uid = process.getuid();
+        const gid = process.getgid();
+        await exec.exec('sudo', ['chown', `${uid}:${gid}`, '-R', '.']);
+    }
+    return exitCode;
 }
 async function installRustTarget(target, toolchain) {
     if (!target || target.length === 0) {

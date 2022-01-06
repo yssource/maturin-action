@@ -277,7 +277,7 @@ async function dockerBuild(tag: string, args: string[]): Promise<number> {
   writeFileSync(scriptPath, commands.join('\n'))
   await fs.chmod(scriptPath, 0o755)
 
-  return await exec.exec('docker', [
+  const exitCode = await exec.exec('docker', [
     'run',
     '--rm',
     '--workdir',
@@ -310,6 +310,13 @@ async function dockerBuild(tag: string, args: string[]): Promise<number> {
     image,
     scriptPath
   ])
+  // Fix file permissions
+  if (IS_LINUX || IS_MACOS) {
+    const uid = process.getuid()
+    const gid = process.getgid()
+    await exec.exec('sudo', ['chown', `${uid}:${gid}`, '-R', '.'])
+  }
+  return exitCode
 }
 
 /**
